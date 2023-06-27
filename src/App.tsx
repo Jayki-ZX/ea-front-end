@@ -1,100 +1,49 @@
-import React ,{ useState, useEffect }from 'react';
-import logo from './logo.svg';
-import carga from './icons/Carga.png'
-import descarga from './icons/Descarga.png'
-import heat from './icons/Heat.png'
+import React ,{ useState, useEffect } from 'react';
 
 import Chart from "react-apexcharts";
-import Icono from './Components/Icono';
 
 import { socket } from './socket';
 
 import './App.css';
-import { appendFile } from 'fs';
 
 const App= () => {
 
   const [isConnected, setIsConnected] = useState(socket.connected);
-  const [cargaState,setcargaState]=useState(true)
-  const [descargaState,setdescargaState]=useState(true)
-  const [heatState,setheatState]=useState(true);
-  const [seriesState,setSeriesState]=useState({series: [30,40,50,60,70]})
   
-  const [leftRpm, setLeftRpm] = useState(0);
-  const [rightRpm, setRightRpm] = useState(0);
-  const [leftVelocity, setLeftVelocity] = useState(0);
-  const [rightVelocity, setRightVelocity] = useState(0);
+  const [averageTemperature, setAverageTemperature] = useState(0);
+  const [maximumTemperature, setMaximumTemperature] = useState(0);
+  const [minimumTemperature, setMinimumTemperature] = useState(0);
+  const [kellyIzqTemperature, setKellyIzqTemperature] = useState(0);
+  const [kellyDerTemperature, setKellyDerTemperature] = useState(0);
+
   const [power, setPower] = useState(0);
+  const [chartPower, setChartPower] = useState(chartValue(power, 8000));
   const [soc, setSoc] = useState(0);
+  const [velocity, setVelocity] = useState(0);
+  const [chartVelocity, setChartVelocity] = useState(chartValue(velocity, 100));
+  const units = ["Km/h", "%"];
 
-  const [chartState,setchartState] =useState(
-    
-    {
-      series: [76, 67, 61, 90],
-            // options: {
-            //   chart: {
-            //     height: 390,
-            //     type: 'radialBar',
-            //   },
-            //   plotOptions: {
-            //     radialBar: {
-            //       offsetY: 0,
-            //       startAngle: 0,
-            //       endAngle: 270,
-            //       hollow: {
-            //         margin: 5,
-            //         size: '30%',
-            //         background: 'transparent',
-            //         image: undefined,
-            //       },
-            //       dataLabels: {
-            //         name: {
-            //           show: false,
-            //         },
-            //         value: {
-            //           show: false,
-            //         }
-            //       }
-            //     }
-            //   },
-
-
-            //   colors: ['#1ab7ea', '#0084ff', '#39539E', '#0077B5'],
-            //   labels: ['Vimeo', 'Messenger', 'Facebook', 'LinkedIn'],
-            //   legend: {
-            //     show: true,
-            //     floating: true,
-            //     fontSize: '16px',
-            //     position: 'left',
-            //     offsetX: 160,
-            //     offsetY: 15,
-            //     labels: {
-            //       useSeriesColors: true,
-            //     },
-                
-                 
-            //     formatter: function(seriesName: string, opts: { w: { globals: { series: { [x: string]: string; }; }; }; seriesIndex: string | number; }) {
-            //       return seriesName + ":  " + opts.w.globals.series[opts.seriesIndex]
-            //     },
-            //     itemMargin: {
-            //       vertical: 3
-            //     }
-            //   },
-            //   responsive: [{
-            //     breakpoint: 480,
-            //     options: {
-            //       legend: {
-            //           show: false
-            //       }
-            //     }
-            //   }]},
-
-
-
-
-
-  })
   console.log(socket);
+
+  function chartValue(value : number, maximum : number) {
+    return Number((value/maximum).toFixed(2)) * 100;
+  }
+
+  function rpmToKmh(rpm : number) {
+    let localVelocity = 2*3.6*Math.PI*0.3*rpm/60;
+    return Number(localVelocity.toFixed(1));
+  }
+
+  useEffect(() => {
+    console.log("updated velocity ", velocity);
+    setChartVelocity(chartValue(velocity, 100));
+  }, [velocity])
+
+  useEffect(() => {
+    console.log("updated power ", power);
+    setChartPower(chartValue(power, 8000));
+  }, [power])
+
   useEffect(() => {
     function onConnect() {
       console.log("connected to server");
@@ -111,17 +60,23 @@ const App= () => {
       setSoc(bms[41]); // bms[41] -> SOC
       setPower(bms[36]*bms[31]); // bms[36] -> current, bms[31] -> pack voltage
       console.log(bms);
+      setAverageTemperature(bms[45]);
+      setMinimumTemperature(bms[46]);
+      setMaximumTemperature(bms[48]);
     })
 
-    socket.on('kellyIzq', (kellyIzq: any) => {
-      console.log("Received data from kellyIzq");
-      setLeftRpm(kellyIzq[17]);
-      console.log(kellyIzq);
+    socket.on('kellyIzq', (data: any) => {
+      console.log("Received data from kelly_izq");
+      console.log(data);
+      setVelocity(Math.max(rpmToKmh(data[6]), velocity));
+      setKellyIzqTemperature(data[11]);
     })
 
-    socket.on('kellyDer', (kellyDer : any) => {
-      console.log("Received data from kellyDer");
-      setRightRpm(kellyDer[17]);
+    socket.on('kellyDer', (data : any) => {
+      console.log("Received data from kelly_der");
+      console.log(data);
+      setVelocity(Math.max(rpmToKmh(data[6]), velocity));
+      setKellyDerTemperature(data[11]);
     })
 
     socket.on('connect', onConnect);
@@ -140,59 +95,40 @@ const App= () => {
     };
   }, []);
 
+  function changeValues() {
+    setSoc(Number(Math.random().toFixed(2))*100);
+    setPower(Number(Math.random().toFixed(3))*8000);
+    setVelocity(Number(Math.random().toFixed(2))*100);
+  }
+
   return (
     <div className="App">
-      {/* <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header> */}
-{/*       
-      <div className='row'>
-      <div className="col-4 alertas ">
-        
-      <div className="vstack gap-1">
-          <div ><Icono {...{show: cargaState, img: carga}}></Icono></div>
-          <div ><Icono {...{show: heatState, img: heat}}></Icono></div>
-          <div ><Icono {...{show: descargaState, img: descarga}}></Icono></div>
-          
-        </div>
-
-        
-        
-      </div>
-      <div className="col-8 filler-leyendas">Leyendas</div>
-  
-
-      </div> */}
-
-      <div className={`row`}>
-      <div className="col-4 mb-1 mr-5"></div>
-      <div className="col-2 d-flex justify-content-center mt-2 ml-5">
+      <div className="temps">Temperaturas</div>
+      <div className="temps">BMS promedio: {averageTemperature} °C</div>
+      <div className="temps">BMS menor: {minimumTemperature} °C</div>
+      <div className="temps">BMS mayor: {maximumTemperature} °C</div>
+      <div className="temps">Kelly derecho: {kellyDerTemperature} °C</div>
+      <div className="temps">Kelly izquierdo: {kellyIzqTemperature} °C</div>
+      <h1 style={{
+        color: '#FF0000',
+      }}>Potencia:  {power} W</h1>
+      {/* /*<button onClick={changeValues}></button> */}
       <Chart
-      
               options={ {
-                
                 plotOptions: {
                   radialBar: {
                     offsetY: -50,
                     offsetX: 50,
                     startAngle: -90,
-                    endAngle: 0,
+                    endAngle: 90,
                     hollow: {
                       margin: 0,
                       size: '60%',
                       background: 'transparent',
                       image: undefined,
+                    },
+                    track: {
+                      background: '#333333'
                     },
                     dataLabels: {
                       name: {
@@ -206,23 +142,23 @@ const App= () => {
                 },
   
   
-                colors: ['#1ab7ea', '#0084ff', '#39539E', '#0077B5'],
-                labels: ['RPM Izq', 'RPM Der', 'SOC', 'Potencia'],
+                colors: ['#FFFF00', '#00FF00'],
+                labels: ['Velocidad', 'SOC'],
                 legend: {
                   show: true,
                   floating: true,
-                  fontSize: '20px',
+                  fontSize: '30px',
                   position: 'left',
-                  horizontalAlign: 'left', 
+                  horizontalAlign: 'center', 
                   
-                  offsetX: 650,//-370,
-                  offsetY: -20,//-5,
+                  offsetX: 480,//-370,
+                  offsetY: 270,//-5,
                   labels: {
                     useSeriesColors: true,
                   },
                   // aca van las unidades de medida
-                  formatter: function(seriesName: string, opts: { w: { globals: { series: { [x: string]: string; }; }; }; seriesIndex: string | number; }) {
-                    return seriesName + ":  " + opts.w.globals.series[opts.seriesIndex]
+                  formatter: function(seriesName: string, opts: { w: { globals: { series: { [x: string]: string; }; }; }; seriesIndex:  number; }) {
+                    return seriesName + ":  " + opts.w.globals.series[opts.seriesIndex] + " "+ units[opts.seriesIndex]
                   },
                   itemMargin: {
                     vertical: 7,
@@ -237,162 +173,14 @@ const App= () => {
                     }
                   }
                 }]}}
-              series={ [leftRpm, rightRpm, soc, power] }
+              series={ [velocity, soc] }
               type="radialBar"
               width= "1220"
       
       
       />
+      
       </div>
-      <div className="col-1 d-flex justify-content-center mt-2 ml-5">
-      <Chart
-      
-              options={ {
-                
-                plotOptions: {
-                  radialBar: {
-                    offsetY: 300,
-                    offsetX: -80,
-                    startAngle: -90,
-                    endAngle: 0,
-                    hollow: {
-                      margin: 0,
-                      size: '50%',
-                      background: 'transparent',
-                      image: undefined,
-                    },
-                    dataLabels: {
-                      name: {
-                        show: false,
-                      },
-                      value: {
-                        show: false,
-                      }
-                    }
-                  }
-                },
-  
-  
-                colors: ['#1ab7ea', '#0084ff', '#39539E', '#0077B5', '#990000'],
-                labels: ['RPM', 'Temperatura del motor', 'Temperatura del inversor', 'Throttle', 'Reverse'],
-                legend: {
-                  show: true,
-                  floating: true,
-                  fontSize: '10px',
-                  position: 'left',
-                  horizontalAlign: 'left', 
-                  
-                  offsetX: 210,//-370,
-                  offsetY: 305,//-5,
-                  labels: {
-                    useSeriesColors: true,
-                  },
-
-                  markers: {
-                    width:5,
-                    height:5,
-                    radius: 10
-                  },
-                  
-                  formatter: function(seriesName: string, opts: { w: { globals: { series: { [x: string]: string; }; }; }; seriesIndex: string | number; }) {
-                    return seriesName + ":  " + opts.w.globals.series[opts.seriesIndex]
-                  },
-                  itemMargin: {
-                    vertical: -1,
-                    horizontal: -10
-                  }
-                },
-                responsive: [{
-                  breakpoint: 480,
-                  options: {
-                    legend: {
-                        show: false
-                    }
-                  }
-                }]}}
-              series={ seriesState.series}
-              type="radialBar"
-              width= "600"
-      
-      
-      />
-      </div>
-      <div className="col-5 d-flex justify-content-center mt-2 ml-5">
-      <Chart
-      
-              options={ {
-                
-                plotOptions: {
-                  radialBar: {
-                    offsetY: 300,
-                    offsetX: 0,
-                    startAngle: -90,
-                    endAngle: 0,
-                    hollow: {
-                      margin: 0,
-                      size: '50%',
-                      background: 'transparent',
-                      image: undefined,
-                    },
-                    dataLabels: {
-                      name: {
-                        show: false,
-                      },
-                      value: {
-                        show: false,
-                      }
-                    }
-                  }
-                },
-  
-  
-                colors: ['#1ab7ea', '#0084ff', '#39539E', '#0077B5', '#990000'],
-                labels: ['RPM', 'Temperatura del motor', 'Temperatura del inversor', 'Throttle', 'Reverse'],
-                legend: {
-                  show: true,
-                  floating: true,
-                  fontSize: '10px',
-                  position: 'left',
-                  horizontalAlign: 'left', 
-                  
-                  offsetX: 290,//-370,
-                  offsetY: 305,//-5,
-                  labels: {
-                    useSeriesColors: true,
-                  },
-
-                  markers: {
-                    width:5,
-                    height:5,
-                    radius: 10
-                  },
-                  
-                  formatter: function(seriesName: string, opts: { w: { globals: { series: { [x: string]: string; }; }; }; seriesIndex: string | number; }) {
-                    return seriesName + ":  " + opts.w.globals.series[opts.seriesIndex]
-                  },
-                  itemMargin: {
-                    vertical: -1,
-                    horizontal: -10
-                  }
-                },
-                responsive: [{
-                  breakpoint: 480,
-                  options: {
-                    legend: {
-                        show: false
-                    }
-                  }
-                }]}}
-              series={ seriesState.series}
-              type="radialBar"
-              width= "600"
-      
-      
-      />
-      </div>
-         
-</div>    
-    </div>
   );
 }
 

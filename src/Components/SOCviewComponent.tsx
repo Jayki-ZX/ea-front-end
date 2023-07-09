@@ -3,6 +3,7 @@ import ReactApexChart from "react-apexcharts";
 import { ApexOptions } from 'apexcharts';
 
 import '../style-sheets/SOCviewComponent.css';
+import batteryIcon from "../icons/battery.svg";
 
 /*
 const series = [{ soc }];
@@ -52,13 +53,16 @@ const BarSOC: React.FC<Props> = props => {
         colors: ["#00FF00"],
         dataLabels: {
             enabled: true,
-            offsetX: 610,
+            offsetX: 520,
             formatter: function(val, opts) {
                 return `${val} %`
             }
         },
         labels: ["SOC"],
         xaxis: {
+            axisBorder: {
+                show: false
+            },
             labels: {
                 show: false,
             }
@@ -75,15 +79,23 @@ const BarSOC: React.FC<Props> = props => {
             enabled: false
         },
         grid: {
-            show: false
+            show: false,
+            xaxis: {
+                lines: {
+                    show: false
+                }
+            },
+            yaxis: {
+                lines: {
+                    show: false
+                }
+            }
         }
     };
     return (
         <div className="SOC_barChart_container">
-            <ReactApexChart options={options} series={series} type="bar" height={100} width={1220}/>
-            <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100" fill="#ffffff" className="bi bi-battery" viewBox="0 0 16 16">
-                <path d="M0 6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm2-1a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2zm14 3a1.5 1.5 0 0 1-1.5 1.5v-3A1.5 1.5 0 0 1 16 8z"/>
-            </svg>
+            <img className="Battery_icon" src={batteryIcon}/>
+            <ReactApexChart className="Battery_graph" options={options} series={series} type="bar" height={180} width={1170}/>
         </div>
 
     );

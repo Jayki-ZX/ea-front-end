@@ -7,6 +7,7 @@ import { socket } from './socket';
 import BarSOC from "./Components/SOCviewComponent";
 
 import './App.css';
+import { relative } from 'path';
 
 const App= () => {
 
@@ -20,7 +21,7 @@ const App= () => {
 
   const [power, setPower] = useState(0);
   const [chartPower, setChartPower] = useState(chartValue(power, 8000));
-  const [soc, setSoc] = useState(75);
+  const [soc, setSoc] = useState(71);
   const [velocity, setVelocity] = useState(0);
   const [chartVelocity, setChartVelocity] = useState(chartValue(velocity, 100));
   const units = ["Km/h", "%"];
@@ -180,7 +181,12 @@ const App= () => {
               width= "1220"
       />
       {/* options={options} series={series}/> */}
-      <BarSOC soc={soc} /> 
+      <div style={{
+        position: "relative",
+        top: "-300px"
+      }}>
+        <BarSOC soc={soc}/> 
+      </div>
       </div>
   );
 }

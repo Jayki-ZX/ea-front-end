@@ -1,4 +1,16 @@
 .SOC_barChart_container {
-    width: 100%;
+    width: 1240px;
+    height: 115px;
+    position: relative;
     /* height: 120px; */
+}
+
+.Battery_graph {
+    position: absolute;
+    top: -35px;
+    left: 9px;
+}
+
+.Battery_icon {
+    z-index: 100;
 }
